@@ -7,7 +7,7 @@ tools that already do the hard work:
 | Keymap        | Action            | Powered by                                            |
 | ------------- | ----------------- | ----------------------------------------------------- |
 | `<leader>cc`  | Create a class    | `vim.snippet` (native snippet templates)              |
-| `<leader>ci`  | Implement an interface | `workspace/symbol` + treesitter + LSP code action |
+| `<leader>ci`  | Implement an interface | live `workspace/symbol` picker + treesitter + LSP code action |
 | `<leader>ca`  | Code actions      | `vim.lsp.buf.code_action` (passthrough)               |
 
 The philosophy: language-aware generation (stubbing interface members,
@@ -17,12 +17,14 @@ be re-implemented per language.
 
 ## Requirements
 
-- Neovim **0.10+** (`vim.snippet`, `vim.lsp.buf_request_all`)
+- Neovim **0.10+** (`vim.snippet`, `vim.lsp.buf_request_sync`)
 - A configured LSP server for your language (for `<leader>ci` / `<leader>ca`)
 - Treesitter parser for your language (for `<leader>ci`)
-- Optional: [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-  with [telescope-ui-select](https://github.com/nvim-telescope/telescope-ui-select.nvim)
-  — turns the interface / code-action pickers into fuzzy finders.
+- Optional but recommended:
+  [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) — turns
+  `<leader>ci` into a **single live picker**: one popup that searches base-class
+  / interface candidates via `workspace/symbol` as you type. Without it,
+  `<leader>ci` falls back to a query prompt + `vim.ui.select`.
 
 ## Install (lazy.nvim)
 
@@ -65,9 +67,10 @@ You can also drive everything through `:Forge <create_class|implement|code_actio
 
 - **Create class** — `<leader>cc`, type a name, a class snippet is expanded at
   the cursor with working tabstops.
-- **Implement interface** — put the cursor inside a class, `<leader>ci`, type a
-  query, pick the interface. forge inserts the `implements` clause and asks the
-  LSP to stub the members.
+- **Implement interface** — put the cursor inside a class, `<leader>ci`. A single
+  picker opens; as you type it live-searches base-class / interface candidates
+  via `workspace/symbol`. Pick one and forge inserts the `implements` clause and
+  asks the LSP to stub the members. (The current class is excluded from results.)
 - **Code actions** — `<leader>ca` opens the LSP code-action menu.
 
 ## Extending
@@ -101,11 +104,11 @@ Ships with defaults for **dart, java, typescript, javascript, python**.
 :checkhealth forge
 ```
 
-## Limitations (first iteration)
+## Limitations
 
 - The `braces` clause inserter is line-based; it handles single-line and simple
   multi-line class headers. Exotic headers may need a manual tweak.
 - The implement step relies on the LSP exposing an "implement / add missing
   members" code action. Coverage varies by server.
-- The picker is a query box + `vim.ui.select` (fuzzy via telescope-ui-select),
-  not yet a live-updating telescope picker. On the roadmap.
+- The live picker queries `workspace/symbol` synchronously per keystroke (short
+  timeout). Snappy in practice; very large workspaces may feel it.

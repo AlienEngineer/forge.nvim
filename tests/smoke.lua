@@ -26,6 +26,7 @@ for _, mod in ipairs({
   "forge.ts",
   "forge.lsp",
   "forge.snippet",
+  "forge.picker",
   "forge.health",
   "forge.actions.create_class",
   "forge.actions.implement",
@@ -141,7 +142,43 @@ e2e("java", "java", { "class Foo {", "  void bar() {}", "}" }, 2, "class Foo imp
 e2e("typescript", "typescript", { "class Foo {", "  bar() {}", "}" }, 2, "class Foo implements I {")
 e2e("python", "python", { "class Foo:", "    def bar(self):", "        pass" }, 2, "class Foo(I):")
 
--- 9. health check runs without error.
+-- 9. picker: workspace/symbol query filtering (kinds + self-exclusion).
+local picker = require("forge.picker")
+local real_request_sync = vim.lsp.buf_request_sync
+vim.lsp.buf_request_sync = function(_, _, _, _)
+  return {
+    [1] = {
+      result = {
+        { name = "Comparable", kind = 11, location = { uri = "file:///a.dart" } }, -- Interface
+        { name = "Widget", kind = 5, location = { uri = "file:///b.dart" } }, -- Class
+        { name = "myVar", kind = 13, location = { uri = "file:///c.dart" } }, -- Variable (filtered out)
+        { name = "Self", kind = 5, location = { uri = "file:///d.dart" } }, -- excluded by name
+      },
+    },
+  }
+end
+local qbuf = vim.api.nvim_create_buf(true, false)
+local got = picker._query_symbols("x", { bufnr = qbuf, kinds = { [5] = true, [11] = true }, exclude = "Self" })
+local names = {}
+for _, s in ipairs(got) do
+  names[s.name] = true
+end
+check("query keeps Interface (kind 11)", names["Comparable"] == true)
+check("query keeps Class (kind 5)", names["Widget"] == true)
+check("query drops Variable (kind 13)", names["myVar"] == nil)
+check("query drops excluded self name", names["Self"] == nil)
+check("query returns {} for empty prompt", #picker._query_symbols("", { bufnr = qbuf }) == 0)
+vim.lsp.buf_request_sync = real_request_sync
+
+-- 10. picker falls back to vim.ui.input when Telescope is unavailable.
+local input_called = false
+vim.ui.input = function(_, _)
+  input_called = true
+end
+picker.pick_symbol({ bufnr = qbuf, kinds = {}, on_choice = function() end })
+check("pick_symbol uses fallback without telescope", input_called == true)
+
+-- 11. health check runs without error.
 check("health.check runs", pcall(require("forge.health").check))
 
 print(("\n%d failure(s)"):format(failures))

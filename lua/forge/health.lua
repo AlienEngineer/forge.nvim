@@ -28,9 +28,9 @@ function M.check()
   end
 
   if pcall(require, "telescope") then
-    ok("telescope.nvim found")
+    ok("telescope.nvim found — implement uses a live workspace-symbol picker")
   else
-    warn("telescope.nvim not found (optional). Install telescope-ui-select for fuzzy pickers")
+    warn("telescope.nvim not found — implement falls back to a prompt + vim.ui.select")
   end
 end
 
