@@ -1,0 +1,7 @@
+# Neovim / editor cruft
+*.luac
+tags
+.luarc.json
+
+# OS
+.DS_Store
