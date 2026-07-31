@@ -1,14 +1,5 @@
--- Single-popup, live symbol picker for the implement flow. As you type, it
--- re-queries the LSP `workspace/symbol` endpoint and shows matching base-class /
--- interface candidates. Uses Telescope's dynamic finder when available and
--- degrades to a prompt + `vim.ui.select` otherwise.
---
--- Nothing here generates code: the search is the LSP's, the fuzzy UI is
--- Telescope's. forge only filters to the interesting symbol kinds and forwards
--- the pick.
 local M = {}
 
--- Human-readable "where does this symbol live" hint.
 local function symbol_location(sym)
   local where = sym.containerName
   if (not where or where == "") and sym.location and sym.location.uri then
@@ -18,9 +9,27 @@ local function symbol_location(sym)
 end
 M._symbol_location = symbol_location
 
--- Synchronously query workspace/symbol on the *source* buffer (opts.bufnr), so
--- the request reaches that buffer's LSP client rather than the picker's prompt
--- buffer (which has none). Filters to opts.kinds and drops opts.exclude.
+local function contains_icase(haystack, needle)
+  if not needle or needle == "" then
+    return true
+  end
+  return haystack:lower():find(needle:lower(), 1, true) ~= nil
+end
+
+local function primitive_candidates(prompt, literals)
+  local out = {}
+  local seen = {}
+  for _, name in ipairs(literals or {}) do
+    if name ~= "" and not seen[name] and contains_icase(name, prompt or "") then
+      seen[name] = true
+      out[#out + 1] = { name = name, _forge_kind = "primitive" }
+    end
+  end
+  return out, seen
+end
+M._primitive_candidates = primitive_candidates
+
+-- Synchronously query workspace/symbol on the source buffer and return filtered symbols.
 local function query_symbols(prompt, opts)
   if not prompt or prompt == "" then
     return {}
@@ -43,7 +52,30 @@ local function query_symbols(prompt, opts)
 end
 M._query_symbols = query_symbols
 
--- Live Telescope picker: one popup, results refresh on every keystroke.
+local function candidates(prompt, opts)
+  local prim, seen = primitive_candidates(prompt, opts.literals)
+  local out = {}
+  for _, item in ipairs(prim) do
+    out[#out + 1] = item
+  end
+  for _, sym in ipairs(query_symbols(prompt, opts)) do
+    if not seen[sym.name] then
+      out[#out + 1] = sym
+      seen[sym.name] = true
+    end
+  end
+  return out
+end
+M._candidates = candidates
+
+local function default_display(item)
+  local where = symbol_location(item)
+  if item._forge_kind == "primitive" then
+    where = "primitive"
+  end
+  return ("%s  %s"):format(item.name, where)
+end
+
 local function telescope_pick(opts)
   local pickers = require("telescope.pickers")
   local finders = require("telescope.finders")
@@ -53,17 +85,17 @@ local function telescope_pick(opts)
 
   pickers
     .new({}, {
-      prompt_title = "Implement (type to search base classes)",
+      prompt_title = opts.prompt_title,
       finder = finders.new_dynamic({
-        entry_maker = function(sym)
+        entry_maker = function(item)
           return {
-            value = sym,
-            display = ("%s  %s"):format(sym.name, symbol_location(sym)),
-            ordinal = sym.name,
+            value = item,
+            display = opts.display_item(item),
+            ordinal = item.name,
           }
         end,
         fn = function(prompt)
-          return query_symbols(prompt, opts)
+          return candidates(prompt, opts)
         end,
       }),
       sorter = conf.generic_sorter({}),
@@ -81,22 +113,19 @@ local function telescope_pick(opts)
     :find()
 end
 
--- Fallback for when Telescope is absent: prompt for a query, then select.
 local function fallback_pick(opts)
-  vim.ui.input({ prompt = "Interface to implement: " }, function(query)
+  vim.ui.input({ prompt = opts.input_prompt }, function(query)
     if query == nil then
       return
     end
-    local symbols = query_symbols(query, opts)
-    if #symbols == 0 then
+    local items = candidates(query, opts)
+    if #items == 0 then
       vim.notify("forge: no matching symbols", vim.log.levels.WARN)
       return
     end
-    vim.ui.select(symbols, {
-      prompt = "Implement interface",
-      format_item = function(s)
-        return ("%s  %s"):format(s.name, symbol_location(s))
-      end,
+    vim.ui.select(items, {
+      prompt = opts.select_prompt,
+      format_item = opts.display_item,
     }, function(choice)
       if choice then
         opts.on_choice(choice)
@@ -105,12 +134,8 @@ local function fallback_pick(opts)
   end)
 end
 
--- Pick a base class / interface and hand it to opts.on_choice(symbol).
---   opts.bufnr     : source buffer whose LSP client answers workspace/symbol
---   opts.kinds     : set of LSP SymbolKind numbers to keep (or nil for all)
---   opts.exclude   : symbol name to omit (e.g. the current class)
---   opts.on_choice : fn(symbol) invoked with the chosen symbol
-function M.pick_symbol(opts)
+local function pick(opts)
+  opts.display_item = opts.display_item or default_display
   if pcall(require, "telescope") then
     local ok = pcall(telescope_pick, opts)
     if ok then
@@ -118,6 +143,23 @@ function M.pick_symbol(opts)
     end
   end
   fallback_pick(opts)
+end
+
+function M.pick_symbol(opts)
+  pick(vim.tbl_extend("force", {
+    prompt_title = "Implement (type to search base classes)",
+    input_prompt = "Interface to implement: ",
+    select_prompt = "Implement interface",
+  }, opts))
+end
+
+function M.pick_type(opts)
+  pick(vim.tbl_extend("force", {
+    prompt_title = "Field type (type to search)",
+    input_prompt = "Field type: ",
+    select_prompt = "Select field type",
+    literals = opts.literals or {},
+  }, opts))
 end
 
 return M

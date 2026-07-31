@@ -7,6 +7,8 @@ tools that already do the hard work:
 | Keymap        | Action            | Powered by                                            |
 | ------------- | ----------------- | ----------------------------------------------------- |
 | `<leader>cc`  | Create a class    | `vim.snippet` (native snippet templates)              |
+| `<leader>cf`  | Create a field    | name prompt + live type picker (primitives + `workspace/symbol`) |
+| `<leader>ctf` | Toggle field final| line-level toggle (`final`/`readonly`) inside class   |
 | `<leader>ci`  | Implement an interface | live `workspace/symbol` picker + treesitter + LSP code action |
 | `<leader>ca`  | Code actions      | `vim.lsp.buf.code_action` (passthrough)               |
 
@@ -47,6 +49,8 @@ require("forge").setup({
   prefix = "<leader>c",
   keymaps = {
     create_class = "c", -- <leader>cc
+    create_field = "f", -- <leader>cf
+    toggle_field_final = "tf", -- <leader>ctf
     implement    = "i", -- <leader>ci
     code_action  = "a", -- <leader>ca
   },
@@ -61,12 +65,18 @@ require("forge").setup({
 })
 ```
 
-You can also drive everything through `:Forge <create_class|implement|code_action>`.
+You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|code_action>`.
 
 ## Usage
 
 - **Create class** — `<leader>cc`, type a name, a class snippet is expanded at
   the cursor with working tabstops.
+- **Create field** — `<leader>cf`, type field name, then pick field type from
+  one live popup. The picker includes language primitives (e.g. `String`) plus
+  matching workspace symbols.
+- **Toggle field final** — `<leader>ctf` on a field line inside a class toggles
+  field immutability keyword on/off (`final` for dart/java, `readonly` for
+  typescript).
 - **Implement interface** — put the cursor inside a class, `<leader>ci`. A single
   picker opens; as you type it live-searches base-class / interface candidates
   via `workspace/symbol`. Pick one and forge inserts the `implements` clause and
