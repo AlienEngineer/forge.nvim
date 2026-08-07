@@ -5,3 +5,6 @@ tags
 
 # OS
 .DS_Store
+
+# Local Git worktrees
+.worktrees/
