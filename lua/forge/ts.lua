@@ -1,5 +1,11 @@
 local M = {}
 
+local function cursor_pos()
+  local cur = vim.api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_get_current_line()
+  return { cur[1] - 1, math.min(cur[2], math.max(#line - 1, 0)) }
+end
+
 -- Walk up the treesitter tree from the cursor until a node whose type is in
 -- `node_types` is found. Returns the node or nil.
 -- Always forces a re-parse to avoid stale trees between buffer edits.
@@ -10,8 +16,7 @@ local function enclosing_node(node_types)
       parser:parse(true)
     end)
   end
-  local cur = vim.api.nvim_win_get_cursor(0)
-  local ok, node = pcall(vim.treesitter.get_node, { bufnr = 0, pos = { cur[1] - 1, cur[2] } })
+  local ok, node = pcall(vim.treesitter.get_node, { bufnr = 0, pos = cursor_pos() })
   if not ok or not node then
     return nil
   end
@@ -97,8 +102,7 @@ function M.enclosing_method(node_types)
       parser:parse(true)
     end)
   end
-  local cur = vim.api.nvim_win_get_cursor(0)
-  local ok, start = pcall(vim.treesitter.get_node, { bufnr = 0, pos = { cur[1] - 1, cur[2] } })
+  local ok, start = pcall(vim.treesitter.get_node, { bufnr = 0, pos = cursor_pos() })
   if not ok or not start then
     return nil
   end
