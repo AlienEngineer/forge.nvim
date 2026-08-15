@@ -11,6 +11,7 @@ tools that already do the hard work:
 | `<leader>ctf` | Toggle field final| line-level toggle (`final`/`readonly`) inside class   |
 | `<leader>ci`  | Implement an interface | live `workspace/symbol` picker + treesitter + LSP code action |
 | `<leader>ca`  | Code actions      | `vim.lsp.buf.code_action` (passthrough)               |
+| `<leader>cnr` | Add refactoring comment | inserts language-aware `Refactoring:` comment above current line |
 
 The philosophy: language-aware generation (stubbing interface members,
 scaffolding) is already solved by LSP servers, treesitter and snippets. forge
@@ -53,6 +54,8 @@ require("forge").setup({
     toggle_field_final = "tf", -- <leader>ctf
     implement    = "i", -- <leader>ci
     code_action  = "a", -- <leader>ca
+    comment_refactoring = "nr", -- <leader>cnr
+    help         = "?", -- <leader>c?
   },
   implement_symbol_kinds = { [5] = true, [11] = true }, -- Class, Interface
   filetype_aliases = {
@@ -65,7 +68,7 @@ require("forge").setup({
 })
 ```
 
-You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|code_action>`.
+You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|code_action|comment_refactoring>`.
 
 ## Usage
 
@@ -82,6 +85,11 @@ You can also drive everything through `:Forge <create_class|create_field|toggle_
   via `workspace/symbol`. Pick one and forge inserts the `implements` clause and
   asks the LSP to stub the members. (The current class is excluded from results.)
 - **Code actions** — `<leader>ca` opens the LSP code-action menu.
+- **Refactoring comment** — `<leader>cnr` inserts `Refactoring: ` as a language-aware
+  comment above current line and places cursor after colon.
+- **Help** — `<leader>c?` opens a searchable popup listing every configured
+  action, its keymap, and description (Telescope fuzzy-find if installed,
+  `vim.ui.select` fallback otherwise).
 
 ## Extending
 

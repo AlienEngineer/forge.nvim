@@ -6,18 +6,8 @@ local lsp = require("forge.lsp")
 local M = {}
 
 local function create_method_filter(action)
-  local t = (action.title or ""):lower()
-  return t:find("create", 1, true) ~= nil
-    and (
-      t:find("method", 1, true) ~= nil
-      or t:find("function", 1, true) ~= nil
-      or t:find("member", 1, true) ~= nil
-      or t:find("missing", 1, true) ~= nil
-      or t:find("generate", 1, true) ~= nil
-      or t:find("implement", 1, true) ~= nil
-      or t:find("add", 1, true) ~= nil
-    )
-    and t:find("create class", 1, true) == nil
+  local title = action.title or ""
+  return title:lower():match("^create method '[^']+'$") ~= nil
 end
 
 local function expand_snippet(lang)

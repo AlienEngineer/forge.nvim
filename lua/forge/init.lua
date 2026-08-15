@@ -47,6 +47,18 @@ local actions = {
   code_action = function()
     require("forge.actions.code_action").run()
   end,
+  comment_refactoring = function()
+    require("forge.actions.comment_refactoring").run()
+  end,
+  code_menu = function()
+    require("forge.actions.menu").run()
+  end,
+  duplicate_test = function()
+    require("forge.actions.duplicate_test").run()
+  end,
+  help = function()
+    require("forge.actions.help").run()
+  end,
 }
 
 local descriptions = {
@@ -64,7 +76,14 @@ local descriptions = {
   extract_variable = "Forge: extract to variable",
   extract_method = "Forge: extract to method",
   code_action = "Forge: code actions",
+  comment_refactoring = "Forge: add refactoring comment",
+  code_menu = "Forge: code shortcuts menu",
+  duplicate_test = "Forge: duplicate test",
+  help = "Forge: show keymap help",
 }
+
+M.actions = actions
+M.descriptions = descriptions
 
 M.config = nil
 

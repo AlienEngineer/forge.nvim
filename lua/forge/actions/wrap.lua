@@ -188,11 +188,47 @@ local function fallback(kind, ft, word)
   return snippet(kind, ft)
 end
 
+local function wrap_selection(kind, srow, erow, header, ft)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local lines = vim.api.nvim_buf_get_lines(bufnr, srow, erow + 1, false)
+  local base_indent = lines[1]:match("^(%s*)") or ""
+  local inner_indent = indent_unit()
+  local out = { base_indent .. header }
+  for _, line in ipairs(lines) do
+    out[#out + 1] = inner_indent .. line
+  end
+  if header:find("{", 1, true) then
+    out[#out + 1] = base_indent .. "}"
+  end
+  vim.api.nvim_buf_set_lines(bufnr, srow, erow + 1, false, out)
+  if kind == "if" then
+    local header_line = out[1]
+    local cond_start = header_line:find("condition", 1, true)
+    if cond_start then
+      vim.api.nvim_win_set_cursor(0, { srow + 1, cond_start - 1 })
+      return
+    end
+  end
+  vim.api.nvim_win_set_cursor(0, { srow + 1, #base_indent + 1 })
+end
+
 function M.run(kind)
   local ft = config.lang(vim.bo.filetype) and (config.get().filetype_aliases[vim.bo.filetype] or vim.bo.filetype) or nil
   if not ft or not WRAP_NODES[kind] or not WRAP_NODES[kind].snippet[ft] then
     vim.notify(("forge: %s not supported for '%s'"):format(kind, vim.bo.filetype), vim.log.levels.WARN)
     return
+  end
+
+  -- If visual selection exists, wrap selection lines
+  local ok_s, s_pos = pcall(vim.fn.getpos, "'<")
+  local ok_e, e_pos = pcall(vim.fn.getpos, "'>")
+  if ok_s and ok_e and s_pos and e_pos and (s_pos[2] ~= 0 or s_pos[3] ~= 0) then
+    local s_line, _ = s_pos[2] - 1, math.max(0, s_pos[3] - 1)
+    local e_line, _ = e_pos[2] - 1, math.max(0, e_pos[3] - 1)
+    if s_line <= e_line then
+      wrap_selection(kind, s_line, e_line, WRAP_NODES[kind].header[ft], ft)
+      return
+    end
   end
 
   local node = find_wrap_node()

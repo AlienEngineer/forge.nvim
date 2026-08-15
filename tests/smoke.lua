@@ -43,6 +43,10 @@ for _, mod in ipairs({
   "forge.actions.extract_method",
   "forge.actions.implement",
   "forge.actions.code_action",
+  "forge.actions.comment_refactoring",
+  "forge.actions.menu",
+  "forge.actions.duplicate_test",
+  "forge.actions.help",
 }) do
   local ok = pcall(require, mod)
   check("require " .. mod, ok)
@@ -80,6 +84,8 @@ check("keymap inline_variable (cvi)", has_map("cvi"))
 check("keymap extract_variable (cev)", has_map("cev"))
 check("keymap extract_method (cem)", has_map("cem"))
 check("keymap code_action (ca)", has_map("ca"))
+check("keymap comment_refactoring (cnr)", has_map("nr"))
+check("keymap help (c?)", has_map("c?"))
 check(":Forge command exists", vim.fn.exists(":Forge") == 2)
 
 -- 3. config.lang resolves filetypes + aliases.
@@ -130,9 +136,28 @@ vim.lsp.util.apply_workspace_edit = real_apply_workspace_edit
 vim.lsp.buf.execute_command = real_execute_command
 
 -- 4. create_class at top-level expands scaffold.
+local comment_buf = vim.api.nvim_create_buf(true, false)
+vim.api.nvim_set_current_buf(comment_buf)
+
+-- 3b. comment_refactoring inserts an indented note and focuses its body.
+vim.bo[comment_buf].filetype = "dart"
+vim.api.nvim_buf_set_lines(comment_buf, 0, -1, false, { "  final title = 'Forge';" })
+vim.api.nvim_win_set_cursor(0, { 1, 4 })
+require("forge.actions.comment_refactoring").run()
+local refactoring_lines = vim.api.nvim_buf_get_lines(comment_buf, 0, -1, false)
+local refactoring_cursor = vim.api.nvim_win_get_cursor(0)
+check(
+  "comment_refactoring inserts comment above current line",
+  refactoring_lines[1] == "  // Refactoring: " and refactoring_lines[2] == "  final title = 'Forge';"
+)
+check("comment_refactoring places cursor after prefix", refactoring_cursor[1] == 1 and refactoring_cursor[2] == 17)
+
 local buf = vim.api.nvim_create_buf(true, false)
 vim.api.nvim_set_current_buf(buf)
+vim.api.nvim_buf_delete(comment_buf, { force = true })
 vim.bo[buf].filetype = "dart"
+vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "NewClass" })
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
 require("forge.actions.create_class").run()
 local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 check("create_class inserted class scaffold", text:find("class ", 1, true) ~= nil and text:find("{", 1, true) ~= nil)
@@ -174,11 +199,17 @@ check("create_method inserts method scaffold", method_text:find("void", 1, true)
 
 -- create_method uses LSP code action on missing method call.
 local create_method_mod = require("forge.actions.create_method")
+local create_method_filter = create_method_mod._create_method_filter
+check("create_method filter matches Dart action", create_method_filter({ title = "Create method 'fromMap'" }))
+check("create_method filter ignores case", create_method_filter({ title = "CREATE METHOD 'fromMap'" }))
+check("create_method filter rejects function", not create_method_filter({ title = "Create function 'fromMap'" }))
+check("create_method filter rejects class", not create_method_filter({ title = "Create class 'SwaggerParameter'" }))
+check("create_method filter rejects implement", not create_method_filter({ title = "Implement members" }))
 local real_buf_request_sync2 = vim.lsp.buf_request_sync
 local real_code_action2 = vim.lsp.buf.code_action
 local create_method_called = false
 vim.lsp.buf_request_sync = function(_, _, _, _)
-  return { [1] = { result = { { title = "Create method 'newMethod' from type 'Xpto'", edit = {} }, { title = "Fix All" } } } }
+  return { [1] = { result = { { title = "Create method 'newMethod'", edit = {} }, { title = "Fix All" } } } }
 end
 vim.lsp.buf.code_action = function(opts)
   create_method_called = true

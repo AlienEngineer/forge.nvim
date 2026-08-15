@@ -20,8 +20,8 @@ M.defaults = {
     create_field = "f", -- <prefix>f
     create_method = "m", -- <prefix>m
     create_typedef = "td", -- <prefix>td
-    wrap_if = "wi", -- <prefix>wi
-    wrap_for = "wf", -- <prefix>wf
+    wrap_if = { key = "wi", modes = { "n", "v" } }, -- <prefix>wi
+    wrap_for = { key = "wf", modes = { "n", "v" } }, -- <prefix>wf
     add_param = "p", -- <prefix>p
     toggle_field_final = "tf", -- <prefix>tf
     toggle_body = "b", -- <prefix>b
@@ -31,6 +31,10 @@ M.defaults = {
     extract_variable = { key = "ev", modes = { "n", "v" } }, -- <prefix>ev
     extract_method = { key = "em", modes = { "n", "v" } }, -- <prefix>em
     code_action = "a", -- <prefix>a
+    comment_refactoring = "nr", -- <prefix>nr
+    code_menu = { key = " ", modes = { "n", "v" } }, -- <prefix><space>
+    duplicate_test = "d", -- <prefix>d
+    help = "?", -- <prefix>?
   },
   -- Symbol kinds offered when picking an interface (LSP SymbolKind numbers).
   implement_symbol_kinds = { [5] = true, [11] = true }, -- Class, Interface
@@ -66,6 +70,7 @@ M.defaults = {
       style = "braces",
       implements_keyword = "implements",
       field_final_keyword = "final",
+      comment_prefix = "//",
     },
     java = {
       class_template = "public class ${1:Name} {\n\t$0\n}",
@@ -93,6 +98,7 @@ M.defaults = {
       style = "braces",
       implements_keyword = "implements",
       field_final_keyword = "final",
+      comment_prefix = "//",
     },
     typescript = {
       class_template = "class ${1:Name} {\n\t$0\n}",
@@ -122,6 +128,7 @@ M.defaults = {
       style = "braces",
       implements_keyword = "implements",
       field_final_keyword = "readonly",
+      comment_prefix = "//",
     },
     javascript = {
       -- JS has no `implements`, so only class scaffolding is enabled.
@@ -130,6 +137,7 @@ M.defaults = {
       param_snippet = "${1:name}",
       method_node_types = { method_definition = true, function_declaration = true },
       class_node_types = { class_declaration = true },
+      comment_prefix = "//",
     },
     python = {
       class_template = "class ${1:Name}:\n\t$0",
@@ -154,6 +162,7 @@ M.defaults = {
       },
       class_node_types = { class_definition = true },
       style = "python",
+      comment_prefix = "#",
     },
   },
 }
