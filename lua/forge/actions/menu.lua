@@ -17,8 +17,7 @@ end
 
 local function extract_method_filter(action)
   local t = (action.title or ""):lower()
-  return t:find("extract") ~= nil
-    and (t:find("method") ~= nil or t:find("function") ~= nil or t:find("closure") ~= nil)
+  return t:find("extract") ~= nil and (t:find("method") ~= nil or t:find("function") ~= nil or t:find("closure") ~= nil)
 end
 
 function M.run()
@@ -30,33 +29,74 @@ function M.run()
 
   -- Rename
   if lsp.has_rename() then
-    table.insert(candidates, { key = "cr", label = "Rename", run = function() pcall(vim.lsp.buf.rename) end })
+    table.insert(candidates, {
+      key = "cr",
+      label = "Rename",
+      run = function()
+        pcall(vim.lsp.buf.rename)
+      end,
+    })
   end
 
   -- Extract variable
   if lsp.has_code_action(extract_variable_filter) then
-    table.insert(candidates, { key = "cev", label = "Extract Variable", run = function() require("forge.actions.extract_variable").run() end })
+    table.insert(candidates, {
+      key = "cev",
+      label = "Extract Variable",
+      run = function()
+        require("forge.actions.extract_variable").run()
+      end,
+    })
   end
 
   -- Extract method
   if lsp.has_code_action(extract_method_filter) then
-    table.insert(candidates, { key = "cem", label = "Extract Method", run = function() require("forge.actions.extract_method").run() end })
+    table.insert(candidates, {
+      key = "cem",
+      label = "Extract Method",
+      run = function()
+        require("forge.actions.extract_method").run()
+      end,
+    })
   end
 
   -- Create method (use create_method's filter if available)
   local ok, create_mod = pcall(require, "forge.actions.create_method")
-  if ok and create_mod and create_mod._create_method_filter and lsp.has_code_action(create_mod._create_method_filter) then
-    table.insert(candidates, { key = "cm", label = "Create Method", run = function() require("forge.actions.create_method").run() end })
+  if
+    ok
+    and create_mod
+    and create_mod._create_method_filter
+    and lsp.has_code_action(create_mod._create_method_filter)
+  then
+    table.insert(candidates, {
+      key = "cm",
+      label = "Create Method",
+      run = function()
+        require("forge.actions.create_method").run()
+      end,
+    })
   end
 
   -- Toggle body: show when inside method (treesitter found)
   if lang.method_node_types and ts.enclosing_method(lang.method_node_types) then
-    table.insert(candidates, { key = "cb", label = "Toggle Body (expr<->block)", run = function() require("forge.actions.toggle_body").run() end })
+    table.insert(candidates, {
+      key = "cb",
+      label = "Toggle Body (expr<->block)",
+      run = function()
+        require("forge.actions.toggle_body").run()
+      end,
+    })
   end
 
   -- Implement: show when inside class
   if lang.class_node_types and ts.enclosing_class(lang.class_node_types) then
-    table.insert(candidates, { key = "ci", label = "Implement / Add stubs", run = function() require("forge.actions.implement").run() end })
+    table.insert(candidates, {
+      key = "ci",
+      label = "Implement / Add stubs",
+      run = function()
+        require("forge.actions.implement").run()
+      end,
+    })
   end
 
   if #candidates == 0 then

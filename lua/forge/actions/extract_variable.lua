@@ -37,7 +37,7 @@ function M.run()
       local ln = line[1]
       -- match word followed by non-word or end (variable usage). Prefer pattern with
       -- word followed by non-alnum (to avoid matching substrings).
-      local s, e, name = ln:find('([%a_][%w_]*)')
+      local s, e, name = ln:find("([%a_][%w_]*)")
       if s then
         return s - 1, name
       end

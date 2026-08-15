@@ -21,7 +21,9 @@ local function collect_rows()
       }
     end
   end
-  table.sort(rows, function(a, b) return a.name < b.name end)
+  table.sort(rows, function(a, b)
+    return a.name < b.name
+  end)
   return rows
 end
 M._collect_rows = collect_rows

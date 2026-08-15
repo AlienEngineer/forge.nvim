@@ -8,8 +8,7 @@ function M.run()
     apply = true,
     filter = function(action)
       local t = (action.title or ""):lower()
-      return t:find("inline") ~= nil
-        and (t:find("variable") ~= nil or t:find("local") ~= nil or t:find("field") ~= nil)
+      return t:find("inline") ~= nil and (t:find("variable") ~= nil or t:find("local") ~= nil or t:find("field") ~= nil)
     end,
   })
 end

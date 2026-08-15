@@ -31,7 +31,7 @@ function M.run()
         return nil
       end
       local ln = line[1]
-      local s, e, name = ln:find('([%a_][%w_]*)%s*%(')
+      local s, e, name = ln:find("([%a_][%w_]*)%s*%(")
       if s then
         return s - 1, name
       end
