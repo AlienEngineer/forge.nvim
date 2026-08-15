@@ -12,7 +12,9 @@ local function sig_text(bufnr, start_row)
   local continued = false
   for i = start_row, start_row + 8 do
     local line = vim.api.nvim_buf_get_lines(bufnr, i, i + 1, false)[1]
-    if not line then break end
+    if not line then
+      break
+    end
     local stripped = (continued and line:gsub("^%s+", "") or line:gsub("^%s+", ""))
     continued = true
     table.insert(parts, stripped)
@@ -58,12 +60,16 @@ local function parse_braces_sig(raw)
   sig = sig:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
   -- Extract the param list from the last balanced parens.
   local before_paren, params = sig:match("^(.-)%((.*)%)%s*$")
-  if not before_paren then return nil end
+  if not before_paren then
+    return nil
+  end
   local tokens = {}
   for t in before_paren:gmatch("%S+") do
     tokens[#tokens + 1] = t
   end
-  if #tokens < 1 then return nil end
+  if #tokens < 1 then
+    return nil
+  end
   -- Last token is the method name; everything before is [modifiers +] return type.
   local name = tokens[#tokens]
   -- Strip leading modifiers to get just the return type.
@@ -72,7 +78,9 @@ local function parse_braces_sig(raw)
     type_start = type_start + 1
   end
   local return_type = table.concat(tokens, " ", type_start, #tokens - 1)
-  if return_type == "" then return_type = "void" end
+  if return_type == "" then
+    return_type = "void"
+  end
   return name, params, return_type
 end
 
@@ -81,7 +89,9 @@ local function parse_ts_sig(raw)
   local sig = raw:match("^(.-)%s*{") or raw
   sig = sig:gsub("^%s*async%s+", ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
   local name = sig:match("^([%w_$]+)%(")
-  if not name then return nil end
+  if not name then
+    return nil
+  end
   local params = sig:match("%((.-)%)")
   -- Return type follows "):"; strip generic qualifiers like "Promise<..."
   local return_type = sig:match("%)%s*:%s*(.+)$") or "void"
@@ -93,10 +103,14 @@ end
 local function parse_py_sig(raw)
   local sig = raw:gsub("^%s*def%s+", ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
   local name = sig:match("^([%w_]+)%(")
-  if not name then return nil end
+  if not name then
+    return nil
+  end
   -- Find matching close paren (handles nested parens in type annotations).
   local open_pos = sig:find("%(")
-  if not open_pos then return nil end
+  if not open_pos then
+    return nil
+  end
   local depth = 0
   local close_pos
   for i = open_pos, #sig do
@@ -111,7 +125,9 @@ local function parse_py_sig(raw)
       end
     end
   end
-  if not close_pos then return nil end
+  if not close_pos then
+    return nil
+  end
   local params = sig:sub(open_pos + 1, close_pos - 1)
   -- Remove self / cls (first positional param).
   params = params:gsub("^self%s*,?%s*", ""):gsub("^cls%s*,?%s*", "")
@@ -120,7 +136,9 @@ local function parse_py_sig(raw)
   for pair in (params .. ","):gmatch("([^,]+),") do
     local typ = pair:match(":%s*([^=,]+)") or pair:gsub("^%s+", ""):gsub("%s+$", "")
     typ = typ:gsub("^%s+", ""):gsub("%s+$", "")
-    if typ ~= "" then types[#types + 1] = typ end
+    if typ ~= "" then
+      types[#types + 1] = typ
+    end
   end
   params = table.concat(types, ", ")
   -- Return type lives after `) ->` and before the trailing `:`.
@@ -143,11 +161,7 @@ local function build_typedef(real_ft, name, params, return_type)
   elseif real_ft == "typescript" or real_ft == "javascript" then
     return ("type ${1:%s} = (%s) => %s;"):format(cap, params, return_type)
   elseif real_ft == "java" then
-    return ("@FunctionalInterface\ninterface ${1:%s} {\n\t%s apply(%s);\n}"):format(
-      cap,
-      return_type,
-      params
-    )
+    return ("@FunctionalInterface\ninterface ${1:%s} {\n\t%s apply(%s);\n}"):format(cap, return_type, params)
   elseif real_ft == "python" then
     local type_list = params ~= "" and params or ""
     return ("${1:%s}: TypeAlias = Callable[[%s], %s]"):format(cap, type_list, return_type)
@@ -220,4 +234,3 @@ function M.run()
 end
 
 return M
-
