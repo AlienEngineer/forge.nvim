@@ -122,6 +122,14 @@ Ships with defaults for **dart, java, typescript, javascript, python**.
 :checkhealth forge
 ```
 
+## Development and CI
+
+CI runs `make lint` and `make test` for every pull request and push to `master`.
+The root [`VERSION`](VERSION) file is the repository's semantic version marker
+and must contain one `MAJOR.MINOR.PATCH` value. After successful checks on
+`master`, CI creates one patch-version commit with `[skip ci]`; that generated
+commit does not start another CI run.
+
 ## Limitations
 
 - The `braces` clause inserter is line-based; it handles single-line and simple
