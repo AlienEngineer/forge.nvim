@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          version: v0.10.4
+          neovim: true
+      - uses: JohnnyMorganz/stylua-action@v3.0.0
+        with:
+          version: v2.5.2
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --version
+      - name: Lint
+        run: make lint
+      - name: Smoke test
+        run: make test
+
+  bump-version:
+    name: Bump version
+    needs: checks
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Increment patch version
+        run: bash scripts/bump-version.sh VERSION
+      - name: Commit version bump
+        run: |
+          version="$(cat VERSION)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git commit -m "chore: bump version to $version [skip ci]"
+          git push
