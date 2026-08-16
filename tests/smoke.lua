@@ -13,6 +13,10 @@ local function check(name, cond)
   end
 end
 
+local function has_parser(language)
+  return pcall(vim.treesitter.get_parser, 0, language)
+end
+
 -- Capture notifications so warn-paths don't spam / can be asserted.
 local last_notify
 vim.notify = function(msg, level)
@@ -114,10 +118,15 @@ vim.lsp.buf.execute_command = function(_)
   command_called = true
 end
 
-lsp_mod.try_code_action(function(a) return (a.title or ""):lower():find("create class") ~= nil end, function()
+lsp_mod.try_code_action(function(a)
+  return (a.title or ""):lower():find("create class") ~= nil
+end, function()
   fallback_called = true
 end)
-check("try_code_action: fallback when no match", fallback_called == true and apply_called == false and command_called == false)
+check(
+  "try_code_action: fallback when no match",
+  fallback_called == true and apply_called == false and command_called == false
+)
 
 -- try_code_action: fires code_action when match found.
 fallback_called = false
@@ -126,7 +135,9 @@ command_called = false
 vim.lsp.buf_request_sync = function(_, _, _, _)
   return { [1] = { result = { { title = "Create class 'Foo'", edit = {} }, { title = "Fix All" } } } }
 end
-lsp_mod.try_code_action(function(a) return (a.title or ""):lower():find("create class") ~= nil end, function()
+lsp_mod.try_code_action(function(a)
+  return (a.title or ""):lower():find("create class") ~= nil
+end, function()
   fallback_called = true
 end)
 check("try_code_action: fires code_action when match found", apply_called == true and fallback_called == false)
@@ -162,40 +173,53 @@ require("forge.actions.create_class").run()
 local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 check("create_class inserted class scaffold", text:find("class ", 1, true) ~= nil and text:find("{", 1, true) ~= nil)
 
--- 4a. create_class inside a class inserts AFTER the enclosing class.
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Outer {", "  void m() {}", "}" })
-pcall(vim.treesitter.start, buf, "dart")
-vim.api.nvim_win_set_cursor(0, { 2, 4 }) -- inside Outer
-require("forge.actions.create_class").run()
-local after_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
--- The original class must still be intact and the new scaffold must appear after it.
-local outer_pos = after_text:find("class Outer", 1, true)
-local new_pos = after_text:find("class ", outer_pos + 1, true)
-check("create_class outside: new class after enclosing", outer_pos ~= nil and new_pos ~= nil and new_pos > outer_pos)
+if has_parser("dart") then
+  -- 4a. create_class inside a class inserts AFTER the enclosing class.
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Outer {", "  void m() {}", "}" })
+  pcall(vim.treesitter.start, buf, "dart")
+  vim.api.nvim_win_set_cursor(0, { 2, 4 }) -- inside Outer
+  require("forge.actions.create_class").run()
+  local after_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+  -- The original class must still be intact and the new scaffold must appear after it.
+  local outer_pos = after_text:find("class Outer", 1, true)
+  local new_pos = after_text:find("class ", outer_pos + 1, true)
+  check("create_class outside: new class after enclosing", outer_pos ~= nil and new_pos ~= nil and new_pos > outer_pos)
+end
 
 -- 5. create_class warns on unsupported filetype.
 vim.bo[buf].filetype = "nonsense"
 last_notify = nil
 require("forge.actions.create_class").run()
-check("create_class warns on unknown ft", last_notify ~= nil and last_notify.msg:find("no class template", 1, true) ~= nil)
+check(
+  "create_class warns on unknown ft",
+  last_notify ~= nil and last_notify.msg:find("no class template", 1, true) ~= nil
+)
 
--- 6. create_field inserts a field snippet inside the enclosing class.
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Book {", "}", "" })
-vim.api.nvim_win_set_cursor(0, { 1, 2 })
 local real_input = vim.ui.input
-require("forge.actions.create_field").run()
-local field_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-check("create_field inserts field scaffold", field_text:find("Type", 1, true) ~= nil and field_text:find("name", 1, true) ~= nil)
+if has_parser("dart") then
+  -- 6. create_field inserts a field snippet inside the enclosing class.
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Book {", "}", "" })
+  vim.api.nvim_win_set_cursor(0, { 1, 2 })
+  require("forge.actions.create_field").run()
+  local field_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+  check(
+    "create_field inserts field scaffold",
+    field_text:find("Type", 1, true) ~= nil and field_text:find("name", 1, true) ~= nil
+  )
 
--- 6a. create_method inserts a method scaffold inside the class.
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Book {", "}" })
-vim.api.nvim_win_set_cursor(0, { 1, 2 })
-require("forge.actions.create_method").run()
-local method_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-check("create_method inserts method scaffold", method_text:find("void", 1, true) ~= nil and method_text:find("name", 1, true) ~= nil)
+  -- 6a. create_method inserts a method scaffold inside the class.
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Book {", "}" })
+  vim.api.nvim_win_set_cursor(0, { 1, 2 })
+  require("forge.actions.create_method").run()
+  local method_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+  check(
+    "create_method inserts method scaffold",
+    method_text:find("void", 1, true) ~= nil and method_text:find("name", 1, true) ~= nil
+  )
+end
 
 -- create_method uses LSP code action on missing method call.
 local create_method_mod = require("forge.actions.create_method")
@@ -214,6 +238,7 @@ end
 vim.lsp.buf.code_action = function(opts)
   create_method_called = true
 end
+vim.bo[buf].filetype = "dart"
 vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "xpto.newMethod()" })
 vim.api.nvim_win_set_cursor(0, { 1, 7 })
 create_method_mod.run()
@@ -291,7 +316,11 @@ require("forge.actions.create_typedef").run()
 check("create_typedef warns on unsupported ft", last_notify ~= nil)
 
 local field_ins = require("forge.field_inserters")
-local fake_method = { range = function() return 0, 0 end }
+local fake_method = {
+  range = function()
+    return 0, 0
+  end,
+}
 local pb = vim.api.nvim_create_buf(false, true)
 vim.api.nvim_buf_set_lines(pb, 0, -1, false, { "void foo() {", "}" })
 local pr, pc, php = field_ins.find_param_insert_pos(pb, fake_method)
@@ -319,49 +348,54 @@ last_notify = nil
 require("forge.actions.toggle_body").run()
 check("toggle_body warns when not in a method", last_notify ~= nil)
 
--- toggle_body works from inside one-line method.
-local real_code_action2 = vim.lsp.buf.code_action
-local action_called = false
-vim.lsp.buf.code_action = function(opts)
-  action_called = true
-  local ok = opts and opts.filter and opts.filter({ title = "Convert to expression body" })
-  check("toggle_body filter picks expression action", ok == true)
-end
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "int f() { return 1; }" })
-pcall(vim.treesitter.start, buf, "dart")
-vim.api.nvim_win_set_cursor(0, { 1, 10 })
-last_notify = nil
-require("forge.actions.toggle_body").run()
-check("toggle_body runs from inside one-line method", action_called == true and last_notify == nil)
-vim.lsp.buf.code_action = real_code_action2
+if has_parser("dart") then
+  -- toggle_body works from inside one-line method.
+  local real_code_action2 = vim.lsp.buf.code_action
+  local action_called = false
+  vim.lsp.buf.code_action = function(opts)
+    action_called = true
+    local ok = opts and opts.filter and opts.filter({ title = "Convert to expression body" })
+    check("toggle_body filter picks expression action", ok == true)
+  end
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "int f() { return 1; }" })
+  pcall(vim.treesitter.start, buf, "dart")
+  vim.api.nvim_win_set_cursor(0, { 1, 10 })
+  last_notify = nil
+  require("forge.actions.toggle_body").run()
+  check("toggle_body runs from inside one-line method", action_called == true and last_notify == nil)
+  vim.lsp.buf.code_action = real_code_action2
 
--- toggle_body works from inside multi-line block body.
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-  "int f() {",
-  "  return 1;",
-  "}",
-})
-vim.api.nvim_win_set_cursor(0, { 2, 3 })
-action_called = false
-vim.lsp.buf.code_action = function(opts)
-  action_called = true
-  check("toggle_body filter picks block action", opts and opts.filter and opts.filter({ title = "Convert to expression body" }) == true)
-end
-require("forge.actions.toggle_body").run()
-check("toggle_body runs from inside multi-line body", action_called == true)
-vim.lsp.buf.code_action = real_code_action2
+  -- toggle_body works from inside multi-line block body.
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+    "int f() {",
+    "  return 1;",
+    "}",
+  })
+  vim.api.nvim_win_set_cursor(0, { 2, 3 })
+  action_called = false
+  vim.lsp.buf.code_action = function(opts)
+    action_called = true
+    check(
+      "toggle_body filter picks block action",
+      opts and opts.filter and opts.filter({ title = "Convert to expression body" }) == true
+    )
+  end
+  require("forge.actions.toggle_body").run()
+  check("toggle_body runs from inside multi-line body", action_called == true)
+  vim.lsp.buf.code_action = real_code_action2
 
--- 7. toggle_field_final toggles field keyword on/off.
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Book {", "  String title;", "}" })
-vim.api.nvim_win_set_cursor(0, { 2, 3 })
-require("forge.actions.toggle_field_final").run()
-local line_after_add = vim.api.nvim_buf_get_lines(buf, 1, 2, false)[1]
-check("toggle_field_final adds final", line_after_add == "  final String title;")
-require("forge.actions.toggle_field_final").run()
-local line_after_remove = vim.api.nvim_buf_get_lines(buf, 1, 2, false)[1]
-check("toggle_field_final removes final", line_after_remove == "  String title;")
+  -- 7. toggle_field_final toggles field keyword on/off.
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "class Book {", "  String title;", "}" })
+  vim.api.nvim_win_set_cursor(0, { 2, 3 })
+  require("forge.actions.toggle_field_final").run()
+  local line_after_add = vim.api.nvim_buf_get_lines(buf, 1, 2, false)[1]
+  check("toggle_field_final adds final", line_after_add == "  final String title;")
+  require("forge.actions.toggle_field_final").run()
+  local line_after_remove = vim.api.nvim_buf_get_lines(buf, 1, 2, false)[1]
+  check("toggle_field_final removes final", line_after_remove == "  String title;")
+end
 local toggle = require("forge.actions.toggle_field_final")
 local ts_on = toggle._toggle_keyword_in_line("private value: string;", "readonly")
 check("toggle helper adds readonly after modifier", ts_on == "private readonly value: string;")
@@ -378,7 +412,11 @@ check("implement warns when not in a class", last_notify ~= nil)
 
 -- 9. clause inserters (pure string logic, no LSP/treesitter needed).
 local inserters = require("forge.inserters")
-local fake_node = { range = function() return 0, 0 end }
+local fake_node = {
+  range = function()
+    return 0, 0
+  end,
+}
 local function run_inserter(style, lines, iface, kw)
   local b = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(b, 0, -1, false, lines)
@@ -432,6 +470,10 @@ check(
 -- 11. end-to-end with real treesitter parsers: locate the class, insert clause.
 local ts = require("forge.ts")
 local function e2e(ft, lang_key, lines, cursor_row, expect)
+  if not has_parser(ft) then
+    print("skip - e2e " .. ft .. ": parser unavailable")
+    return
+  end
   local b = vim.api.nvim_create_buf(true, false)
   vim.api.nvim_set_current_buf(b)
   vim.api.nvim_buf_set_lines(b, 0, -1, false, lines)
@@ -471,28 +513,48 @@ local function e2e_method(ft, lines, cursor_row)
   local lang_cfg = config.lang(ft)
   return ts.enclosing_method(lang_cfg and lang_cfg.method_node_types or {}) ~= nil
 end
-check("e2e dart: enclosing_method found", e2e_method("dart", { "class Foo {", "  void bar() {", "  }", "}" }, 3))
-check("e2e typescript: enclosing_method found", e2e_method("typescript", { "class Foo {", "  bar() {", "  }", "}" }, 3))
-check("e2e python: enclosing_method found", e2e_method("python", { "class Foo:", "    def bar(self):", "        pass" }, 3))
+if has_parser("dart") then
+  check("e2e dart: enclosing_method found", e2e_method("dart", { "class Foo {", "  void bar() {", "  }", "}" }, 3))
+end
+if has_parser("typescript") then
+  check(
+    "e2e typescript: enclosing_method found",
+    e2e_method("typescript", { "class Foo {", "  bar() {", "  }", "}" }, 3)
+  )
+end
+if has_parser("python") then
+  check(
+    "e2e python: enclosing_method found",
+    e2e_method("python", { "class Foo:", "    def bar(self):", "        pass" }, 3)
+  )
+end
 
 -- 11b. wrap_if/wrap_for: block wrapping + snippet fallback.
 vim.api.nvim_set_current_buf(buf)
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-  "void f() {",
-  "  for (var i = 0; i < 3; i++) {",
-  "    print(i);",
-  "  }",
-  "}",
-})
-pcall(vim.treesitter.start, buf, "dart")
-vim.api.nvim_win_set_cursor(0, { 2, 4 })
-require("forge.actions.wrap_if").run()
-local if_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-check("wrap_if wraps loop", if_text:find("if (condition)", 1, true) ~= nil and if_text:find("for (var i = 0", 1, true) ~= nil)
-local if_cursor = vim.api.nvim_win_get_cursor(0)
-local if_line = vim.api.nvim_buf_get_lines(buf, if_cursor[1] - 1, if_cursor[1], false)[1]
-check("wrap_if cursor on condition", if_cursor[1] == 2 and if_line:sub(if_cursor[2] + 1, if_cursor[2] + 9) == "condition")
+if has_parser("dart") then
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+    "void f() {",
+    "  for (var i = 0; i < 3; i++) {",
+    "    print(i);",
+    "  }",
+    "}",
+  })
+  pcall(vim.treesitter.start, buf, "dart")
+  vim.api.nvim_win_set_cursor(0, { 2, 4 })
+  require("forge.actions.wrap_if").run()
+  local if_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+  check(
+    "wrap_if wraps loop",
+    if_text:find("if (condition)", 1, true) ~= nil and if_text:find("for (var i = 0", 1, true) ~= nil
+  )
+  local if_cursor = vim.api.nvim_win_get_cursor(0)
+  local if_line = vim.api.nvim_buf_get_lines(buf, if_cursor[1] - 1, if_cursor[1], false)[1]
+  check(
+    "wrap_if cursor on condition",
+    if_cursor[1] == 2 and if_line:sub(if_cursor[2] + 1, if_cursor[2] + 9) == "condition"
+  )
+end
 
 vim.bo[buf].filetype = "dart"
 vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "print('x');" })
@@ -501,21 +563,27 @@ require("forge.actions.wrap_if").run()
 local if_snippet_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 check("wrap_if snippet fallback", if_snippet_text:find("if", 1, true) ~= nil)
 
-vim.api.nvim_set_current_buf(buf)
-vim.bo[buf].filetype = "dart"
-vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-  "void f() {",
-  "  if (ready) {",
-  "    print('ok');",
-  "  }",
-  "}",
-})
-pcall(vim.treesitter.start, buf, "dart")
-vim.api.nvim_win_set_cursor(0, { 2, 4 })
-require("forge.actions.wrap_for").run()
-local for_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
-check("wrap_for wraps block", for_text:find("for (var item in iterable)", 1, true) ~= nil and for_text:find("if (ready)", 1, true) ~= nil)
+if has_parser("dart") then
+  vim.api.nvim_set_current_buf(buf)
+  vim.bo[buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+    "void f() {",
+    "  if (ready) {",
+    "    print('ok');",
+    "  }",
+    "}",
+  })
+  pcall(vim.treesitter.start, buf, "dart")
+  vim.api.nvim_win_set_cursor(0, { 2, 4 })
+  require("forge.actions.wrap_for").run()
+  local for_text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+  check(
+    "wrap_for wraps block",
+    for_text:find("for (var item in iterable)", 1, true) ~= nil and for_text:find("if (ready)", 1, true) ~= nil
+  )
+end
 
+vim.api.nvim_set_current_buf(buf)
 vim.bo[buf].filetype = "dart"
 vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "recipes" })
 vim.api.nvim_win_set_cursor(0, { 1, 2 })
@@ -549,7 +617,8 @@ check("query keeps Class (kind 5)", names["Widget"] == true)
 check("query drops Variable (kind 13)", names["myVar"] == nil)
 check("query drops excluded self name", names["Self"] == nil)
 check("query returns {} for empty prompt", #picker._query_symbols("", { bufnr = qbuf }) == 0)
-local type_candidates = picker._candidates("str", { bufnr = qbuf, literals = { "String", "int" }, kinds = { [5] = true, [11] = true } })
+local type_candidates =
+  picker._candidates("str", { bufnr = qbuf, literals = { "String", "int" }, kinds = { [5] = true, [11] = true } })
 check("candidates include primitive types", type_candidates[1] and type_candidates[1].name == "String")
 vim.lsp.buf_request_sync = real_request_sync
 

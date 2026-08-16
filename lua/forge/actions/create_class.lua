@@ -15,20 +15,20 @@ local function expand_snippet(lang)
   -- If the cursor is on a word-like token, prefer creating the class at EOF
   -- with that word as the class name. Falls back to inserting after enclosing
   -- class (existing behavior) or expanding at cursor.
-  local name = vim.fn.expand('<cword>')
-  if name and name:match('^[%a_][%w_]*$') then
+  local name = vim.fn.expand("<cword>")
+  if name and name:match("^[%a_][%w_]*$") then
     -- Prepare template: replace common placeholder patterns with name so the
     -- snippet expands with the detected identifier filled in.
     local templ = lang.class_template
     -- Replace ${1:Name} or ${1:any} with the detected name
-    templ = templ:gsub('%${1:.-}', name)
+    templ = templ:gsub("%${1:.-}", name)
     -- Replace legacy __NAME__ placeholders
-    templ = templ:gsub('__NAME__', name)
+    templ = templ:gsub("__NAME__", name)
 
     -- Insert at end of file with a blank line separator
     local line_count = vim.api.nvim_buf_line_count(bufnr)
     -- ensure there is at least one blank line at EOF
-    vim.api.nvim_buf_set_lines(bufnr, line_count, line_count, false, { '', '' })
+    vim.api.nvim_buf_set_lines(bufnr, line_count, line_count, false, { "", "" })
     -- Move cursor to the new insertion point (last line)
     vim.api.nvim_win_set_cursor(0, { line_count + 2, 0 })
 

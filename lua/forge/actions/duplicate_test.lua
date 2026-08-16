@@ -1,7 +1,7 @@
 local M = {}
 
-local ts_utils_ok, ts_utils = pcall(require, 'nvim-treesitter.ts_utils')
-local ts = require('forge.ts')
+local ts_utils_ok, ts_utils = pcall(require, "nvim-treesitter.ts_utils")
+local ts = require("forge.ts")
 
 local function duplicate_lines(bufnr, start_row, end_row)
   local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, end_row + 1, false)
@@ -11,7 +11,9 @@ end
 
 local function strip_quotes(text)
   -- drop surrounding ' " ` so search/cursor target the raw test name, not the quotes.
-  if not text then return text end
+  if not text then
+    return text
+  end
   return text:gsub("^['\"`]", ""):gsub("['\"`]$", "")
 end
 
@@ -140,7 +142,9 @@ local function duplicate_dart_text()
   -- search upward for a line that contains a test invocation
   for i = cur[1], 1, -1 do
     local line = lines[i]
-    if not line then goto continue end
+    if not line then
+      goto continue
+    end
     if line:find("test%s*%(") or line:find("testWidgets%s*%(") or line:find("group%s*%(") then
       local start_row = i - 1
       -- find the position of '(' on the start line
@@ -152,11 +156,18 @@ local function duplicate_dart_text()
       for r = start_row, #lines - 1 do
         local ln = lines[r + 1]
         local cstart = 1
-        if r == start_row then cstart = s_pos end
+        if r == start_row then
+          cstart = s_pos
+        end
         for c = cstart, #ln do
           local ch = ln:sub(c, c)
-          if ch == '(' then depth = depth + 1; started = true end
-          if ch == ')' then depth = depth - 1 end
+          if ch == "(" then
+            depth = depth + 1
+            started = true
+          end
+          if ch == ")" then
+            depth = depth - 1
+          end
           if started and depth == 0 then
             end_row = r
             goto found_end
@@ -164,7 +175,9 @@ local function duplicate_dart_text()
         end
       end
       ::found_end::
-      if not started then return false end
+      if not started then
+        return false
+      end
 
       -- duplicate the block
       duplicate_lines(bufnr, start_row, end_row)
@@ -175,9 +188,15 @@ local function duplicate_dart_text()
         local ln = lines[r + 1]
         if ln then
           local sq = ln:match("'(.-)'")
-          if sq then name = sq; break end
+          if sq then
+            name = sq
+            break
+          end
           local dq = ln:match('"(.-)"')
-          if dq then name = dq; break end
+          if dq then
+            name = dq
+            break
+          end
         end
       end
 
@@ -212,15 +231,21 @@ local function duplicate_rust()
           local end_row = j - 1
           for k = j, #lines do
             local ln = lines[k]
-            for c in ln:gmatch('.') do
-              if c == '{' then brace = brace + 1 end
-              if c == '}' then brace = brace - 1 end
+            for c in ln:gmatch(".") do
+              if c == "{" then
+                brace = brace + 1
+              end
+              if c == "}" then
+                brace = brace - 1
+              end
             end
             if k == j then
               -- account for '{' on signature line
-              if lines[k]:find('{') then brace = brace end
+              if lines[k]:find("{") then
+                brace = brace
+              end
             end
-            if brace == 0 and lines[k]:find('}') then
+            if brace == 0 and lines[k]:find("}") then
               end_row = k - 1
               break
             end
@@ -246,24 +271,32 @@ end
 function M.run()
   local ft = vim.bo.filetype
   -- Try TS/JS treesitter first
-  if ft:match('typescript') or ft:match('javascript') or ft:match('tsx') or ft:match('jsx') then
+  if ft:match("typescript") or ft:match("javascript") or ft:match("tsx") or ft:match("jsx") then
     local ok = duplicate_js_ts()
-    if ok then return end
+    if ok then
+      return
+    end
   end
   -- Dart: try Treesitter then text fallback
-  if ft:match('dart') then
+  if ft:match("dart") then
     local ok = duplicate_dart()
-    if ok then return end
+    if ok then
+      return
+    end
     local ok2 = duplicate_dart_text()
-    if ok2 then return end
+    if ok2 then
+      return
+    end
   end
   -- Try rust regex fallback
-  if ft == 'rust' then
+  if ft == "rust" then
     local ok = duplicate_rust()
-    if ok then return end
+    if ok then
+      return
+    end
   end
 
-  vim.notify('forge: could not find a test to duplicate', vim.log.levels.INFO)
+  vim.notify("forge: could not find a test to duplicate", vim.log.levels.INFO)
 end
 
 return M
