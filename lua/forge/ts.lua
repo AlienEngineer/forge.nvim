@@ -1,9 +1,12 @@
 local M = {}
 
-local function cursor_pos()
+-- Tree-sitter returns only a broad parent node when cursor is past line end.
+local function cursor_node()
   local cur = vim.api.nvim_win_get_cursor(0)
-  local line = vim.api.nvim_get_current_line()
-  return { cur[1] - 1, math.min(cur[2], math.max(#line - 1, 0)) }
+  local line = vim.api.nvim_buf_get_lines(0, cur[1] - 1, cur[1], false)[1] or ""
+  local col = math.min(cur[2], math.max(#line - 1, 0))
+  local ok, node = pcall(vim.treesitter.get_node, { bufnr = 0, pos = { cur[1] - 1, col } })
+  return ok and node or nil
 end
 
 -- Walk up the treesitter tree from the cursor until a node whose type is in
@@ -16,8 +19,8 @@ local function enclosing_node(node_types)
       parser:parse(true)
     end)
   end
-  local ok, node = pcall(vim.treesitter.get_node, { bufnr = 0, pos = cursor_pos() })
-  if not ok or not node then
+  local node = cursor_node()
+  if not node then
     return nil
   end
   while node do
@@ -102,8 +105,8 @@ function M.enclosing_method(node_types)
       parser:parse(true)
     end)
   end
-  local ok, start = pcall(vim.treesitter.get_node, { bufnr = 0, pos = cursor_pos() })
-  if not ok or not start then
+  local start = cursor_node()
+  if not start then
     return nil
   end
 
