@@ -112,7 +112,15 @@ function M.try_code_action(filter, fallback)
             table.insert(titles, a.title or vim.inspect(a))
           end
           vim.schedule(function()
-            vim.notify(string.format("forge.lsp: client=%s params_idx=%d titles=%s", client.name or tostring(client_id), idx, table.concat(titles, " | ")), vim.log.levels.INFO)
+            vim.notify(
+              string.format(
+                "forge.lsp: client=%s params_idx=%d titles=%s",
+                client.name or tostring(client_id),
+                idx,
+                table.concat(titles, " | ")
+              ),
+              vim.log.levels.INFO
+            )
           end)
         end
 
@@ -142,7 +150,14 @@ function M.try_code_action(filter, fallback)
 
   if vim.g.forge_debug_actions and chosen_action then
     vim.schedule(function()
-      vim.notify(string.format("forge.lsp: applying action '%s' (client=%s)", chosen_action.title or "<no title>", chosen_client and chosen_client.name or "?"), vim.log.levels.INFO)
+      vim.notify(
+        string.format(
+          "forge.lsp: applying action '%s' (client=%s)",
+          chosen_action.title or "<no title>",
+          chosen_client and chosen_client.name or "?"
+        ),
+        vim.log.levels.INFO
+      )
     end)
   end
 
