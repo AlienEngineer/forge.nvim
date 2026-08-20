@@ -44,6 +44,9 @@ local actions = {
   extract_method = function()
     require("forge.actions.extract_method").run()
   end,
+  move_to_file = function()
+    require("forge.actions.move_to_file").run()
+  end,
   code_action = function()
     require("forge.actions.code_action").run()
   end,
@@ -75,6 +78,7 @@ local descriptions = {
   inline_variable = "Forge: inline variable",
   extract_variable = "Forge: extract to variable",
   extract_method = "Forge: extract to method",
+  move_to_file = "Forge: move to file",
   code_action = "Forge: code actions",
   comment_refactoring = "Forge: add refactoring comment",
   code_menu = "Forge: code shortcuts menu",

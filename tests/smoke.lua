@@ -45,6 +45,7 @@ for _, mod in ipairs({
   "forge.actions.inline_variable",
   "forge.actions.extract_variable",
   "forge.actions.extract_method",
+  "forge.actions.move_to_file",
   "forge.actions.implement",
   "forge.actions.code_action",
   "forge.actions.comment_refactoring",
@@ -87,6 +88,7 @@ check("keymap implement (ci)", has_map("ci"))
 check("keymap inline_variable (cvi)", has_map("cvi"))
 check("keymap extract_variable (cev)", has_map("cev"))
 check("keymap extract_method (cem)", has_map("cem"))
+check("keymap move_to_file (cmf)", has_map("cmf"))
 check("keymap code_action (ca)", has_map("ca"))
 check("keymap comment_refactoring (cnr)", has_map("nr"))
 check("keymap help (c?)", has_map("c?"))
@@ -145,6 +147,44 @@ check("try_code_action: fires code_action when match found", apply_called == tru
 vim.lsp.buf_request_sync = real_buf_request_sync
 vim.lsp.util.apply_workspace_edit = real_apply_workspace_edit
 vim.lsp.buf.execute_command = real_execute_command
+
+-- 3c. move_to_file applies matching LSP action and filters fallback picker.
+local move_to_file = require("forge.actions.move_to_file")
+local real_buf_request_sync3 = vim.lsp.buf_request_sync
+local real_apply_workspace_edit3 = vim.lsp.util.apply_workspace_edit
+local real_code_action3 = vim.lsp.buf.code_action
+local moved_to_file = false
+local fallback_filter
+
+vim.lsp.buf_request_sync = function(_, _, _, _)
+  return { [1] = { result = { { title = "Move type to file", edit = {} }, { title = "Extract method" } } } }
+end
+vim.lsp.util.apply_workspace_edit = function(_, _)
+  moved_to_file = true
+  return true
+end
+vim.lsp.buf.code_action = function(opts)
+  fallback_filter = opts and opts.filter
+end
+move_to_file.run()
+check("move_to_file applies matching LSP action", moved_to_file == true and fallback_filter == nil)
+
+moved_to_file = false
+vim.lsp.buf_request_sync = function(_, _, _, _)
+  return { [1] = { result = { { title = "Extract method" } } } }
+end
+move_to_file.run()
+check(
+  "move_to_file fallback limits picker to move-file actions",
+  moved_to_file == false
+    and fallback_filter ~= nil
+    and fallback_filter({ title = "MOVE CLASS TO FILE" })
+    and not fallback_filter({ title = "Extract method" })
+)
+
+vim.lsp.buf_request_sync = real_buf_request_sync3
+vim.lsp.util.apply_workspace_edit = real_apply_workspace_edit3
+vim.lsp.buf.code_action = real_code_action3
 
 -- 4. create_class at top-level expands scaffold.
 local comment_buf = vim.api.nvim_create_buf(true, false)
