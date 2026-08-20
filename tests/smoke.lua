@@ -68,19 +68,19 @@ for _, m in ipairs(vim.api.nvim_get_keymap("v")) do
 end
 -- <leader> defaults to "\"
 local function has_map(suffix)
-  for lhs, desc in pairs(maps) do
-    if lhs:sub(-#suffix) == suffix and (desc or ""):find("Forge") then
-      return true
-    end
-  end
-  return false
+  local leader = vim.g.mapleader or "\\"
+  return (maps[leader .. suffix] or ""):find("Forge", 1, true) ~= nil
 end
-check("keymap create_class (cc)", has_map("cc"))
-check("keymap create_field (cf)", has_map("cf"))
-check("keymap create_method (cm)", has_map("cm"))
-check("keymap create_typedef (ctd)", has_map("td"))
-check("keymap wrap_if (cwi)", has_map("wi"))
-check("keymap wrap_for (cwf)", has_map("wf"))
+check("keymap create_class (cnc)", has_map("cnc"))
+check("keymap create_field (cnf)", has_map("cnf"))
+check("keymap create_method (cnm)", has_map("cnm"))
+check("keymap create_typedef (cnt)", has_map("cnt"))
+check("legacy create_class keymap absent (cc)", not has_map("cc"))
+check("legacy create_field keymap absent (cf)", not has_map("cf"))
+check("legacy create_method keymap absent (cm)", not has_map("cm"))
+check("legacy create_typedef keymap absent (ctd)", not has_map("ctd"))
+check("keymap wrap_if (cwi)", has_map("cwi"))
+check("keymap wrap_for (cwf)", has_map("cwf"))
 check("keymap add_param (cp)", has_map("cp"))
 check("keymap toggle_field_final (ctf)", has_map("ctf"))
 check("keymap toggle_body (cb)", has_map("cb"))
@@ -90,7 +90,7 @@ check("keymap extract_variable (cev)", has_map("cev"))
 check("keymap extract_method (cem)", has_map("cem"))
 check("keymap move_to_file (cmf)", has_map("cmf"))
 check("keymap code_action (ca)", has_map("ca"))
-check("keymap comment_refactoring (cnr)", has_map("nr"))
+check("keymap comment_refactoring (cnr)", has_map("cnr"))
 check("keymap help (c?)", has_map("c?"))
 check(":Forge command exists", vim.fn.exists(":Forge") == 2)
 

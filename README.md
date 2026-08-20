@@ -6,8 +6,10 @@ tools that already do the hard work:
 
 | Keymap        | Action            | Powered by                                            |
 | ------------- | ----------------- | ----------------------------------------------------- |
-| `<leader>cc`  | Create a class    | `vim.snippet` (native snippet templates)              |
-| `<leader>cf`  | Create a field    | name prompt + live type picker (primitives + `workspace/symbol`) |
+| `<leader>cnc` | Create a class    | `vim.snippet` (native snippet templates)              |
+| `<leader>cnf` | Create a field    | name prompt + live type picker (primitives + `workspace/symbol`) |
+| `<leader>cnm` | Create a method   | snippet template or matching LSP code action           |
+| `<leader>cnt` | Create type definition | language-specific type definition scaffold        |
 | `<leader>ctf` | Toggle field final| line-level toggle (`final`/`readonly`) inside class   |
 | `<leader>ci`  | Implement an interface | live `workspace/symbol` picker + treesitter + LSP code action |
 | `<leader>cmf` | Move type to file | LSP code action                                      |
@@ -50,8 +52,10 @@ Defaults (override any subset via `opts`):
 require("forge").setup({
   prefix = "<leader>c",
   keymaps = {
-    create_class = "c", -- <leader>cc
-    create_field = "f", -- <leader>cf
+    create_class = "nc", -- <leader>cnc
+    create_field = "nf", -- <leader>cnf
+    create_method = "nm", -- <leader>cnm
+    create_typedef = "nt", -- <leader>cnt
     toggle_field_final = "tf", -- <leader>ctf
     implement    = "i", -- <leader>ci
     move_to_file = "mf", -- <leader>cmf
@@ -74,11 +78,15 @@ You can also drive everything through `:Forge <create_class|create_field|toggle_
 
 ## Usage
 
-- **Create class** — `<leader>cc`, type a name, a class snippet is expanded at
+- **Create class** — `<leader>cnc`, type a name, a class snippet is expanded at
   the cursor with working tabstops.
-- **Create field** — `<leader>cf`, type field name, then pick field type from
+- **Create field** — `<leader>cnf`, type field name, then pick field type from
   one live popup. The picker includes language primitives (e.g. `String`) plus
   matching workspace symbols.
+- **Create method** — `<leader>cnm` inserts a method snippet, or applies a
+  matching LSP create-method action.
+- **Create type definition** — `<leader>cnt` creates a language-specific type
+  definition scaffold.
 - **Toggle field final** — `<leader>ctf` on a field line inside a class toggles
   field immutability keyword on/off (`final` for dart/java, `readonly` for
   typescript).
