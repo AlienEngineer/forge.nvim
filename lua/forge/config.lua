@@ -31,6 +31,7 @@ M.defaults = {
     extract_variable = { key = "ev", modes = { "n", "v" } }, -- <prefix>ev
     extract_method = { key = "em", modes = { "n", "v" } }, -- <prefix>em
     move_to_file = "mf", -- <prefix>mf
+    move_all_to_files = "maf", -- <prefix>maf
     code_action = "a", -- <prefix>a
     comment_refactoring = "nr", -- <prefix>nr
     code_menu = { key = " ", modes = { "n", "v" } }, -- <prefix><space>

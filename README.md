@@ -13,6 +13,7 @@ tools that already do the hard work:
 | `<leader>ctf` | Toggle field final| line-level toggle (`final`/`readonly`) inside class   |
 | `<leader>ci`  | Implement an interface | live `workspace/symbol` picker + treesitter + LSP code action |
 | `<leader>cmf` | Move type to file | LSP code action                                      |
+| `<leader>cmaf` | Move all classes to files | LSP code action for each configured class        |
 | `<leader>ca`  | Code actions      | `vim.lsp.buf.code_action` (passthrough)               |
 | `<leader>cnr` | Add refactoring comment | inserts language-aware `Refactoring:` comment above current line |
 
@@ -59,6 +60,7 @@ require("forge").setup({
     toggle_field_final = "tf", -- <leader>ctf
     implement    = "i", -- <leader>ci
     move_to_file = "mf", -- <leader>cmf
+    move_all_to_files = "maf", -- <leader>cmaf
     code_action  = "a", -- <leader>ca
     comment_refactoring = "nr", -- <leader>cnr
     help         = "?", -- <leader>c?
@@ -74,7 +76,7 @@ require("forge").setup({
 })
 ```
 
-You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|move_to_file|code_action|comment_refactoring>`.
+You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|move_to_file|move_all_to_files|code_action|comment_refactoring>`.
 
 ## Usage
 
@@ -97,6 +99,9 @@ You can also drive everything through `:Forge <create_class|create_field|toggle_
 - **Move type to file** — place cursor on target class or type, then `<leader>cmf`.
   Forge delegates to language server, which controls supported languages,
   destination prompt, and file edits.
+- **Move all classes to files** — `<leader>cmaf` finds every configured class
+  node in current buffer and delegates each move to language server. Classes
+  without matching move-to-file action skip without opening picker.
 - **Code actions** — `<leader>ca` opens the LSP code-action menu.
 - **Refactoring comment** — `<leader>cnr` inserts `Refactoring: ` as a language-aware
   comment above current line and places cursor after colon.

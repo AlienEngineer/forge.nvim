@@ -89,10 +89,12 @@ check("keymap inline_variable (cvi)", has_map("cvi"))
 check("keymap extract_variable (cev)", has_map("cev"))
 check("keymap extract_method (cem)", has_map("cem"))
 check("keymap move_to_file (cmf)", has_map("cmf"))
+check("keymap move_all_to_files (cmaf)", has_map("cmaf"))
 check("keymap code_action (ca)", has_map("ca"))
 check("keymap comment_refactoring (cnr)", has_map("cnr"))
 check("keymap help (c?)", has_map("c?"))
 check(":Forge command exists", vim.fn.exists(":Forge") == 2)
+check(":Forge move_all_to_files dispatch available", require("forge").actions.move_all_to_files ~= nil)
 
 -- 3. config.lang resolves filetypes + aliases.
 local config = require("forge.config")
@@ -185,6 +187,69 @@ check(
 vim.lsp.buf_request_sync = real_buf_request_sync3
 vim.lsp.util.apply_workspace_edit = real_apply_workspace_edit3
 vim.lsp.buf.code_action = real_code_action3
+
+-- 3d. move_all_to_files moves classes bottom-up and never opens a picker.
+if has_parser("dart") then
+  local batch_buf = vim.api.nvim_create_buf(true, false)
+  vim.api.nvim_set_current_buf(batch_buf)
+  vim.bo[batch_buf].filetype = "dart"
+  vim.api.nvim_buf_set_lines(batch_buf, 0, -1, false, {
+    "class First {}",
+    "",
+    "",
+    "class Second {}",
+  })
+  pcall(vim.treesitter.start, batch_buf, "dart")
+  vim.api.nvim_win_set_cursor(0, { 2, 0 })
+
+  local real_batch_request = vim.lsp.buf_request_sync
+  local real_batch_apply = vim.lsp.util.apply_workspace_edit
+  local real_batch_picker = vim.lsp.buf.code_action
+  local requested_rows = {}
+  local applied = 0
+  local picker_calls = 0
+  vim.lsp.buf_request_sync = function(_, _, _, _)
+    requested_rows[#requested_rows + 1] = vim.api.nvim_win_get_cursor(0)[1]
+    return { [1] = { result = { { title = "Move class to file", edit = {} }, { title = "Extract method" } } } }
+  end
+  vim.lsp.util.apply_workspace_edit = function(_, _)
+    applied = applied + 1
+    return true
+  end
+  vim.lsp.buf.code_action = function()
+    picker_calls = picker_calls + 1
+  end
+  move_to_file.run_all()
+  local restored = vim.api.nvim_win_get_cursor(0)
+  check(
+    "move_all_to_files applies every class bottom-up",
+    vim.deep_equal(requested_rows, { 4, 1 }) and applied == 2 and picker_calls == 0
+  )
+  check("move_all_to_files restores cursor", restored[1] == 2 and restored[2] == 0)
+
+  requested_rows = {}
+  applied = 0
+  picker_calls = 0
+  last_notify = nil
+  vim.lsp.buf_request_sync = function(_, _, _, _)
+    requested_rows[#requested_rows + 1] = vim.api.nvim_win_get_cursor(0)[1]
+    return { [1] = { result = { { title = "Extract method" } } } }
+  end
+  move_to_file.run_all()
+  check(
+    "move_all_to_files skips unavailable actions without picker",
+    vim.deep_equal(requested_rows, { 4, 4, 4, 4, 1, 1, 1, 1 })
+      and applied == 0
+      and picker_calls == 0
+      and last_notify ~= nil
+      and last_notify.msg:find("could not automatically move 2 class%(es%)") ~= nil
+  )
+
+  vim.lsp.buf_request_sync = real_batch_request
+  vim.lsp.util.apply_workspace_edit = real_batch_apply
+  vim.lsp.buf.code_action = real_batch_picker
+  vim.api.nvim_buf_delete(batch_buf, { force = true })
+end
 
 -- 4. create_class at top-level expands scaffold.
 local comment_buf = vim.api.nvim_create_buf(true, false)
