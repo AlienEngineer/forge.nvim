@@ -36,6 +36,37 @@ function M.enclosing_class(node_types)
   return enclosing_node(node_types)
 end
 
+-- Return class start positions in reverse source order, so callers can safely
+-- apply edits that remove declarations from the current buffer.
+function M.class_positions(node_types)
+  local ok, parser = pcall(vim.treesitter.get_parser, 0)
+  if not ok or not parser then
+    return {}
+  end
+
+  local trees = parser:parse(true)
+  local positions = {}
+
+  local function visit(node)
+    if node_types[node:type()] then
+      local row, col = node:start()
+      positions[#positions + 1] = { row = row + 1, col = col }
+    end
+    for child in node:iter_children() do
+      visit(child)
+    end
+  end
+
+  for _, tree in ipairs(trees) do
+    visit(tree:root())
+  end
+
+  table.sort(positions, function(a, b)
+    return a.row == b.row and a.col > b.col or a.row > b.row
+  end)
+  return positions
+end
+
 -- Node types that indicate a parameter list (direct children of a function node).
 local PARAM_CHILD_TYPES = {
   formal_parameter_list = true,

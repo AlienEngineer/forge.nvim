@@ -47,6 +47,9 @@ local actions = {
   move_to_file = function()
     require("forge.actions.move_to_file").run()
   end,
+  move_all_to_files = function()
+    require("forge.actions.move_to_file").run_all()
+  end,
   code_action = function()
     require("forge.actions.code_action").run()
   end,
@@ -79,6 +82,7 @@ local descriptions = {
   extract_variable = "Forge: extract to variable",
   extract_method = "Forge: extract to method",
   move_to_file = "Forge: move to file",
+  move_all_to_files = "Forge: move all classes to files",
   code_action = "Forge: code actions",
   comment_refactoring = "Forge: add refactoring comment",
   code_menu = "Forge: code shortcuts menu",
