@@ -12,6 +12,7 @@ tools that already do the hard work:
 | `<leader>cnt` | Create type definition | language-specific type definition scaffold        |
 | `<leader>ctf` | Toggle field final| line-level toggle (`final`/`readonly`) inside class   |
 | `<leader>ci`  | Implement an interface | live `workspace/symbol` picker + treesitter + LSP code action |
+| `<leader>cmf` | Move type to file | LSP code action                                      |
 | `<leader>ca`  | Code actions      | `vim.lsp.buf.code_action` (passthrough)               |
 | `<leader>cnr` | Add refactoring comment | inserts language-aware `Refactoring:` comment above current line |
 
@@ -57,6 +58,7 @@ require("forge").setup({
     create_typedef = "nt", -- <leader>cnt
     toggle_field_final = "tf", -- <leader>ctf
     implement    = "i", -- <leader>ci
+    move_to_file = "mf", -- <leader>cmf
     code_action  = "a", -- <leader>ca
     comment_refactoring = "nr", -- <leader>cnr
     help         = "?", -- <leader>c?
@@ -72,7 +74,7 @@ require("forge").setup({
 })
 ```
 
-You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|code_action|comment_refactoring>`.
+You can also drive everything through `:Forge <create_class|create_field|toggle_field_final|implement|move_to_file|code_action|comment_refactoring>`.
 
 ## Usage
 
@@ -92,6 +94,9 @@ You can also drive everything through `:Forge <create_class|create_field|toggle_
   picker opens; as you type it live-searches base-class / interface candidates
   via `workspace/symbol`. Pick one and forge inserts the `implements` clause and
   asks the LSP to stub the members. (The current class is excluded from results.)
+- **Move type to file** — place cursor on target class or type, then `<leader>cmf`.
+  Forge delegates to language server, which controls supported languages,
+  destination prompt, and file edits.
 - **Code actions** — `<leader>ca` opens the LSP code-action menu.
 - **Refactoring comment** — `<leader>cnr` inserts `Refactoring: ` as a language-aware
   comment above current line and places cursor after colon.

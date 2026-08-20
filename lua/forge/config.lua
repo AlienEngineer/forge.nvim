@@ -30,6 +30,7 @@ M.defaults = {
     -- table form: { key, modes } for keymaps that apply to multiple modes
     extract_variable = { key = "ev", modes = { "n", "v" } }, -- <prefix>ev
     extract_method = { key = "em", modes = { "n", "v" } }, -- <prefix>em
+    move_to_file = "mf", -- <prefix>mf
     code_action = "a", -- <prefix>a
     comment_refactoring = "nr", -- <prefix>nr
     code_menu = { key = " ", modes = { "n", "v" } }, -- <prefix><space>
