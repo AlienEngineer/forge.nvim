@@ -16,10 +16,10 @@ local M = {}
 M.defaults = {
   prefix = "<leader>c",
   keymaps = {
-    create_class = "c", -- <prefix>c
-    create_field = "f", -- <prefix>f
-    create_method = "m", -- <prefix>m
-    create_typedef = "td", -- <prefix>td
+    create_class = "nc", -- <prefix>nc
+    create_field = "nf", -- <prefix>nf
+    create_method = "nm", -- <prefix>nm
+    create_typedef = "nt", -- <prefix>nt
     wrap_if = { key = "wi", modes = { "n", "v" } }, -- <prefix>wi
     wrap_for = { key = "wf", modes = { "n", "v" } }, -- <prefix>wf
     add_param = "p", -- <prefix>p
