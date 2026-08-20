@@ -69,7 +69,7 @@ function M.run()
     and lsp.has_code_action(create_mod._create_method_filter)
   then
     table.insert(candidates, {
-      key = "cm",
+      key = "cnm",
       label = "Create Method",
       run = function()
         require("forge.actions.create_method").run()
